@@ -86,9 +86,10 @@ namespace PokemonGo.RocketAPI.Logic
                 _botStats.addExperience(fortSearch.ExperienceAwarded);
                 System.Console.Title = _botStats.ToString();
 
-                System.Console.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss")}] Farmed XP: {fortSearch.ExperienceAwarded}, Name: { fortInfo.Name }, Gems: { fortSearch.GemsAwarded}, Eggs: {fortSearch.PokemonDataEgg} Items: {StringUtils.GetSummedFriendlyNameOfItemAwardList(fortSearch.ItemsAwarded)}");
+                System.Console.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss")}] Using Pokestop: {fortInfo.Name}");
+                System.Console.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss")}] Received XP: {fortSearch.ExperienceAwarded}, Gems: { fortSearch.GemsAwarded}, Eggs: {fortSearch.PokemonDataEgg} Items: {StringUtils.GetSummedFriendlyNameOfItemAwardList(fortSearch.ItemsAwarded)}");
 
-                await Task.Delay(5000);
+                await Task.Delay(10000);
                 await ExecuteCatchAllNearbyPokemons(client);
             }
         }
