@@ -53,6 +53,7 @@ namespace PokemonGo.RocketAPI.Login
         private static async Task<TokenResponseModel> PollSubmittedToken(string deviceCode)
         {
             return await HttpClientHelper.PostFormEncodedAsync<TokenResponseModel>(OauthTokenEndpoint,
+                new KeyValuePair<string, string>("access_type", "offline"),
                 new KeyValuePair<string, string>("client_id", ClientId),
                 new KeyValuePair<string, string>("client_secret", ClientSecret),
                 new KeyValuePair<string, string>("code", deviceCode),
