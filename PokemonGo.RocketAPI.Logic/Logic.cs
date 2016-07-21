@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,12 +16,14 @@ namespace PokemonGo.RocketAPI.Logic
         private readonly Client _client;
         private readonly ISettings _clientSettings;
         private readonly Inventory _inventory;
+        private BotStats _botStats;
 
         public Logic(ISettings clientSettings)
         {
             _clientSettings = clientSettings;
             _client = new Client(_clientSettings);
             _inventory = new Inventory(_client);
+            _botStats = new BotStats();
         }
 
         public async void Execute()
@@ -32,14 +34,18 @@ namespace PokemonGo.RocketAPI.Logic
                 await _client.DoPtcLogin(_clientSettings.PtcUsername, _clientSettings.PtcPassword);
             else if (_clientSettings.AuthType == AuthType.Google)
                 await _client.DoGoogleLogin();
+                
 
             while (true)
             {
                 try
                 {
                     await _client.SetServer();
-                    await RepeatAction(10, async () => await ExecuteFarmingPokestopsAndPokemons(_client));
                     await TransferDuplicatePokemon();
+                    await _inventory.GetMyPokemon();
+                    await RepeatAction(10, async () => await ExecuteFarmingPokestopsAndPokemons(_client));
+                    System.Console.WriteLine($"Passou!");
+                    
 
                     /*
                 * Example calls below
@@ -77,10 +83,12 @@ namespace PokemonGo.RocketAPI.Logic
                 var update = await client.UpdatePlayerLocation(pokeStop.Latitude, pokeStop.Longitude);
                 var fortInfo = await client.GetFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
                 var fortSearch = await client.SearchFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
+                _botStats.addExperience(fortSearch.ExperienceAwarded);
+                System.Console.Title = _botStats.ToString();
 
-                System.Console.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss")}] Farmed XP: {fortSearch.ExperienceAwarded}, Gems: { fortSearch.GemsAwarded}, Eggs: {fortSearch.PokemonDataEgg} Items: {StringUtils.GetSummedFriendlyNameOfItemAwardList(fortSearch.ItemsAwarded)}");
+                System.Console.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss")}] Farmed XP: {fortSearch.ExperienceAwarded}, Name: { fortInfo.Name }, Gems: { fortSearch.GemsAwarded}, Eggs: {fortSearch.PokemonDataEgg} Items: {StringUtils.GetSummedFriendlyNameOfItemAwardList(fortSearch.ItemsAwarded)}");
 
-                await Task.Delay(15000);
+                await Task.Delay(5000);
                 await ExecuteCatchAllNearbyPokemons(client);
             }
         }
@@ -95,16 +103,19 @@ namespace PokemonGo.RocketAPI.Logic
             {
                 var update = await client.UpdatePlayerLocation(pokemon.Latitude, pokemon.Longitude);
                 var encounterPokemonResponse = await client.EncounterPokemon(pokemon.EncounterId, pokemon.SpawnpointId);
+                var pokeball = await GetPokeBall();
 
                 CatchPokemonResponse caughtPokemonResponse;
                 do
                 {
-                    caughtPokemonResponse = await client.CatchPokemon(pokemon.EncounterId, pokemon.SpawnpointId, pokemon.Latitude, pokemon.Longitude, MiscEnums.Item.ITEM_POKE_BALL); //note: reverted from settings because this should not be part of settings but part of logic
+                    //caughtPokemonResponse = await client.CatchPokemon(pokemon.EncounterId, pokemon.SpawnpointId, pokemon.Latitude, pokemon.Longitude, MiscEnums.Item.ITEM_POKE_BALL); //note: reverted from settings because this should not be part of settings but part of logic
+                    caughtPokemonResponse = await client.CatchPokemon(pokemon.EncounterId, pokemon.SpawnpointId, pokemon.Latitude, pokemon.Longitude, pokeball); //note: reverted from settings because this should not be part of settings but part of logic
                 }
-                while (caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchMissed);
+                while (caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchMissed); 
 
-                System.Console.WriteLine(caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchSuccess ? $"[{DateTime.Now.ToString("HH:mm:ss")}] We caught a {pokemon.PokemonId} with CP {encounterPokemonResponse?.WildPokemon?.PokemonData?.Cp}" : $"[{DateTime.Now.ToString("HH:mm:ss")}] {pokemon.PokemonId} with CP {encounterPokemonResponse?.WildPokemon?.PokemonData?.Cp} got away..");
+                System.Console.WriteLine(caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchSuccess ? $"[{DateTime.Now.ToString("HH:mm:ss")}] We caught a {pokemon.PokemonId} with CP {encounterPokemonResponse?.WildPokemon?.PokemonData?.Cp} XP: { caughtPokemonResponse.Scores.Xp } using a {pokeball}" : $"[{DateTime.Now.ToString("HH:mm:ss")}] {pokemon.PokemonId} with CP {encounterPokemonResponse?.WildPokemon?.PokemonData?.Cp} got away using a {pokeball}..");
                 await Task.Delay(5000);
+                await TransferDuplicatePokemon();
             }
         }
 
@@ -137,10 +148,47 @@ namespace PokemonGo.RocketAPI.Logic
             var duplicatePokemons = await _inventory.GetDuplicatePokemonToTransfer();
             foreach (var duplicatePokemon in duplicatePokemons)
             {
+                
                 var transfer = await _client.TransferPokemon(duplicatePokemon.Id);
                 System.Console.WriteLine($"Transfer {duplicatePokemon.PokemonId} with {duplicatePokemon.Cp})");
                 await Task.Delay(500);
             }
+        }
+        private async Task<MiscEnums.Item> GetPokeBall()
+        {
+            var inventory = await _client.GetInventory();
+            var ballCollection = inventory.InventoryDelta.InventoryItems
+                   .Select(i => i.InventoryItemData?.Item)
+                   .Where(p => p != null)
+                   .GroupBy(i => (MiscEnums.Item)i.Item_)
+                   .Select(kvp => new { ItemId = kvp.Key, Amount = kvp.Sum(x => x.Count) })
+                   .Where(y => y.ItemId == MiscEnums.Item.ITEM_POKE_BALL
+                            || y.ItemId == MiscEnums.Item.ITEM_GREAT_BALL
+                            || y.ItemId == MiscEnums.Item.ITEM_ULTRA_BALL
+                            || y.ItemId == MiscEnums.Item.ITEM_MASTER_BALL);
+
+            var pokeBallsCount = ballCollection.Where(p => p.ItemId == MiscEnums.Item.ITEM_POKE_BALL).
+                DefaultIfEmpty(new { ItemId = MiscEnums.Item.ITEM_POKE_BALL, Amount = 0 }).FirstOrDefault().Amount;
+            var greatBallsCount = ballCollection.Where(p => p.ItemId == MiscEnums.Item.ITEM_GREAT_BALL).
+                DefaultIfEmpty(new { ItemId = MiscEnums.Item.ITEM_GREAT_BALL, Amount = 0 }).FirstOrDefault().Amount;
+            var ultraBallsCount = ballCollection.Where(p => p.ItemId == MiscEnums.Item.ITEM_ULTRA_BALL).
+                DefaultIfEmpty(new { ItemId = MiscEnums.Item.ITEM_ULTRA_BALL, Amount = 0 }).FirstOrDefault().Amount;
+            var masterBallsCount = ballCollection.Where(p => p.ItemId == MiscEnums.Item.ITEM_MASTER_BALL).
+                DefaultIfEmpty(new { ItemId = MiscEnums.Item.ITEM_MASTER_BALL, Amount = 0 }).FirstOrDefault().Amount;
+
+            if (pokeBallsCount > 0)
+                return MiscEnums.Item.ITEM_POKE_BALL;
+
+            if (greatBallsCount > 0)
+                return MiscEnums.Item.ITEM_GREAT_BALL;
+
+            if (ultraBallsCount > 0)
+                return MiscEnums.Item.ITEM_ULTRA_BALL;
+
+            if (masterBallsCount > 0)
+                return MiscEnums.Item.ITEM_MASTER_BALL;
+
+            return MiscEnums.Item.ITEM_POKE_BALL;
         }
     }
 }
