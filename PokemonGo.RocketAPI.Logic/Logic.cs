@@ -42,9 +42,7 @@ namespace PokemonGo.RocketAPI.Logic
                 {
                     await _client.SetServer();
                     await TransferDuplicatePokemon();
-                    await _inventory.GetMyPokemon();
                     await RepeatAction(10, async () => await ExecuteFarmingPokestopsAndPokemons(_client));
-                    System.Console.WriteLine($"Passou!");
                     
 
                     /*
