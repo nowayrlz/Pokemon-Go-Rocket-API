@@ -16,6 +16,6 @@ namespace PokemonGo.RocketAPI
 
         ICollection<KeyValuePair<AllEnum.ItemId, int>> itemRecycleFilter { get; set; }
         
-        var pokemonToEvolve = await _inventory.GetPokemonToEvolve(filter);
+        ICollection<AllEnum.PokemonId> pokemonsToEvolve { get; set; }
     }
 }
