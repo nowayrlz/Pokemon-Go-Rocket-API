@@ -61,7 +61,7 @@ namespace PokemonGo.RocketAPI.Logic
                     var playerStats = inventory.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData).FirstOrDefault(i => i.PlayerStats != null);
                     await DisplayPlayerLevelInTitle();
 
-                    await EvolveAllPokemonWithEnoughCandy();
+                    await EvolveAllPokemonWithEnoughCandy(_clientSettings.pokemonsToEvolve);
                     await TransferDuplicatePokemon();
                     await RecycleItems();
                     await ExecuteFarmingPokestopsAndPokemons();
@@ -135,7 +135,7 @@ namespace PokemonGo.RocketAPI.Logic
                 await RecycleItems();
                 await ExecuteCatchAllNearbyPokemons();
                 await TransferDuplicatePokemon();
-                await EvolveAllPokemonWithEnoughCandy();
+                await EvolveAllPokemonWithEnoughCandy(_clientSettings.pokemonsToEvolve);
             }
         }
 
@@ -186,9 +186,9 @@ namespace PokemonGo.RocketAPI.Logic
             }
         }
 
-        private async Task EvolveAllPokemonWithEnoughCandy()
+        private async Task EvolveAllPokemonWithEnoughCandy(IEnumerable<PokemonId> filter = null)
         {
-            var pokemonToEvolve = await _inventory.GetPokemonToEvolve();
+            var pokemonToEvolve = await _inventory.GetPokemonToEvolve(filter);
             int pokemonEvolved = 0;
             foreach (var pokemon in pokemonToEvolve)
             {
