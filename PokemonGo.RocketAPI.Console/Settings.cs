@@ -1,4 +1,4 @@
-﻿using System.Configuration;
+using System.Configuration;
 using PokemonGo.RocketAPI.Enums;
 using PokemonGo.RocketAPI.GeneratedCode;
 using System;
@@ -16,7 +16,7 @@ namespace PokemonGo.RocketAPI.Console
         public string PtcPassword => UserSettings.Default.PtcPassword;
         public double DefaultLatitude => UserSettings.Default.DefaultLatitude;
         public double DefaultLongitude => UserSettings.Default.DefaultLongitude;
-        public double DefaultAltitude => UserSettings.Default.DefaultAltitude;
+        public double DefaultAltitude => UserSettings.Default.DefaultLongitude;
 
         ICollection<KeyValuePair<ItemId, int>> ISettings.itemRecycleFilter
         {
@@ -26,17 +26,17 @@ namespace PokemonGo.RocketAPI.Console
                 return new[]
                 {
                     new KeyValuePair<ItemId, int>(ItemId.ItemUnknown, 0),
-                    new KeyValuePair<ItemId, int>(ItemId.ItemPokeBall, 20),
-                    new KeyValuePair<ItemId, int>(ItemId.ItemGreatBall, 20),
-                    new KeyValuePair<ItemId, int>(ItemId.ItemUltraBall, 50),
-                    new KeyValuePair<ItemId, int>(ItemId.ItemMasterBall, 100),
+                    new KeyValuePair<ItemId, int>(ItemId.ItemPokeBall, 100),
+                    new KeyValuePair<ItemId, int>(ItemId.ItemGreatBall, 100),
+                    new KeyValuePair<ItemId, int>(ItemId.ItemUltraBall, 999),
+                    new KeyValuePair<ItemId, int>(ItemId.ItemMasterBall, 9999),
 
                     new KeyValuePair<ItemId, int>(ItemId.ItemPotion, 0),
                     new KeyValuePair<ItemId, int>(ItemId.ItemSuperPotion, 0),
-                    new KeyValuePair<ItemId, int>(ItemId.ItemHyperPotion, 20),
+                    new KeyValuePair<ItemId, int>(ItemId.ItemHyperPotion, 0),
                     new KeyValuePair<ItemId, int>(ItemId.ItemMaxPotion, 50),
 
-                    new KeyValuePair<ItemId, int>(ItemId.ItemRevive, 10),
+                    new KeyValuePair<ItemId, int>(ItemId.ItemRevive, 0),
                     new KeyValuePair<ItemId, int>(ItemId.ItemMaxRevive, 50),
 
                      new KeyValuePair<ItemId, int>(ItemId.ItemLuckyEgg, 200),
